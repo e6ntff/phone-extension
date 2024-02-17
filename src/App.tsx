@@ -1,45 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import JsSIP from 'jssip';
+import Register, { Config } from './components/Register';
+import Calls from './components/Calls';
+import CurrentCall from './components/CurrentCall';
+import { Call, Status } from './utils/interfaces';
+import { RTCSession } from 'jssip/lib/RTCSession';
 
-const SoftphoneExtension = () => {
+const App: React.FC = () => {
 	const [phone, setPhone] = useState<JsSIP.UA | null>(null);
+	const [currentSession, setCurrentSession] = useState<RTCSession | null>(null);
+	const [callHistory, setCallHistory] = useState<Call[]>([]);
+	const [isRegistered, setIsRegistered] = useState<boolean>(false);
+	const [isIncomingCall, setIsIncomingCall] = useState<boolean>(false);
+	const [currentStatus, setCurrentStatus] = useState<Status>('incoming');
+	const [isCall, setIsCalling] = useState<boolean>(false);
 
-	const registerUser = () => {
-		const configuration = {
-			sockets: [new JsSIP.WebSocketInterface('wss://voip.uiscom.ru')],
-			uri: 'sip:0332057@voip.uiscom.ru',
-			password: 'fuP7YqwR_R',
-		};
+	useEffect(() => {
+		const storedCallHistory = localStorage.getItem('callHistory');
+		if (storedCallHistory) {
+			setCallHistory(JSON.parse(storedCallHistory));
+		}
+	}, []);
 
+	const updateCallHistory = (call: Call) => {
+		setCallHistory((prevHistory: Call[]) => {
+			const newHistory = [call, ...prevHistory];
+			localStorage.setItem('callHistory', JSON.stringify(newHistory));
+			return newHistory;
+		});
+		setCurrentStatus('ended');
+		setTimeout(() => {
+			setIsCalling(false);
+		}, 1000);
+	};
+
+	const registerUser = (configuration: Config) => {
 		const phoneInstance = new JsSIP.UA(configuration);
 
-		// Обработчик события 'connected'
-		phoneInstance.on('connected', () => {
-			console.log('connected');
-		});
-
-		// Обработчик события 'connecting'
-		phoneInstance.on('connecting', () => {
-			console.log('connecting');
-		});
-
-		// Обработчик события 'registered'
 		phoneInstance.on('registered', () => {
-			console.log('Phone is registered');
+			setIsRegistered(true);
 		});
 
-		// Обработчик события 'unregistered'
 		phoneInstance.on('unregistered', () => {
-			console.log('Phone is unregistered');
+			console.error('Registration Error!');
 		});
 
-		// Начать процесс регистрации
 		phoneInstance.start();
 		setPhone(phoneInstance);
 
-		// Обработчик для события входящего звонка
 		phoneInstance.on('newRTCSession', (e) => {
 			const session = e.session;
+			const isNewIncomingCall = session.direction === 'incoming';
+
+			setCurrentSession(session);
+			if (isNewIncomingCall) {
+				setCurrentStatus('incoming');
+				setIsCalling(true);
+				setIsIncomingCall(true);
+			} else {
+				setIsIncomingCall(false);
+			}
 
 			session.on('addstream', (e) => {
 				const audio = new Audio();
@@ -51,57 +71,96 @@ const SoftphoneExtension = () => {
 				}
 			});
 
-			console.log(session);
-
-			if (session._direction === 'incoming') {
-				session.answer({
-					mediaConstraints: { audio: true, video: false },
-				});
-			}
-
 			session.on('accepted', () => {
-				console.log('Call accepted');
+				setCurrentStatus('connected');
 			});
 
 			session.on('ended', () => {
-				console.log('Call ended');
+				if (isNewIncomingCall) {
+					const newCall: Call = {
+						cause: 'incoming',
+						date: session.start_time,
+						address: session.remote_identity.uri.user,
+						duration: session.end_time - session.start_time,
+					};
+					updateCallHistory(newCall);
+				}
+			});
+
+			session.on('failed', () => {
+				if (isNewIncomingCall) {
+					const newCall: Call = {
+						cause: 'missed',
+						date: session.start_time
+							? new Date(session.start_time)
+							: new Date(),
+						address: session.remote_identity.uri.user,
+						duration: 0,
+					};
+					updateCallHistory(newCall);
+				}
 			});
 		});
 	};
 
-	const makeCall = () => {
+	const makeCall = (address: string) => {
 		if (!phone) {
 			console.error('Phone is not initialized');
 			return;
 		}
 
-		const session = phone.call('sip:0332056@voip.uiscom.ru', {
+		const session = phone.call(address, {
 			mediaConstraints: { audio: true, video: false },
 		});
 
 		session.on('connecting', () => {
-			console.log('Connecting call');
+			setIsCalling(true);
+			setCurrentStatus('connecting');
 		});
 
-		session.on('failed', (data) => {
-			console.log('failed', data);
+		session.on('ended', () => {
+			const newCall: Call = {
+				cause: 'outgoing',
+				date: session.start_time,
+				address: session.remote_identity.uri.user,
+				duration: session.end_time.getTime() - session.start_time.getTime(),
+			};
+			updateCallHistory(newCall);
 		});
 
-		session.on('peerconnection', (data) => {
-			console.log('Peer connection established');
-		});
-
-		session.on('ended', (data) => {
-			console.log('Call ended:', data);
+		session.on('failed', () => {
+			const newCall: Call = {
+				cause: 'failed',
+				date: session.start_time ? new Date(session.start_time) : new Date(),
+				address: session.remote_identity.uri.user,
+				duration: 0,
+			};
+			updateCallHistory(newCall);
 		});
 	};
 
 	return (
 		<>
-			<button onClick={registerUser}>Register User</button>
-			<button onClick={makeCall}>Make Call</button>
+			{isRegistered ? (
+				<>
+					<Calls
+						callHistory={callHistory}
+						setCallHistory={setCallHistory}
+						makeCall={makeCall}
+					/>
+					{isCall && (
+						<CurrentCall
+							currentStatus={currentStatus}
+							isIncomingCall={isIncomingCall}
+							currentSession={currentSession}
+						/>
+					)}
+				</>
+			) : (
+				<Register registerUser={registerUser} />
+			)}
 		</>
 	);
 };
 
-export default SoftphoneExtension;
+export default App;
