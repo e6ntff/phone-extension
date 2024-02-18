@@ -1,5 +1,5 @@
 import { Button, Form, Input } from 'antd';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import JsSIP from 'jssip';
 
 export interface Config {
@@ -19,7 +19,7 @@ const Register: React.FC<Props> = ({ registerUser }) => {
 		password: 'fuP7YqwR_R',
 	});
 
-	const compileConfiguration = () => {
+	const compileConfiguration = useCallback(() => {
 		const { server, login, password } = values;
 
 		const configuration = {
@@ -29,9 +29,9 @@ const Register: React.FC<Props> = ({ registerUser }) => {
 		};
 
 		registerUser(configuration);
-	};
+	}, [registerUser, values]);
 
-	const changeValues = (event: any) => {
+	const changeValues = useCallback((event: any) => {
 		const { name, value } = event.target;
 
 		setValues((prevConfiguration: any) => {
@@ -42,7 +42,7 @@ const Register: React.FC<Props> = ({ registerUser }) => {
 
 			return newConfiguration;
 		});
-	};
+	}, []);
 
 	return (
 		<>
