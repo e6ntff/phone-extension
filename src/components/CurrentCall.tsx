@@ -8,14 +8,9 @@ import { formatTime } from '../utils/formatTime';
 interface Props {
 	currentStatus: Status;
 	currentSession: RTCSession | null;
-	isIncomingCall: boolean;
 }
 
-const CurrentCall: React.FC<Props> = ({
-	currentStatus,
-	currentSession,
-	isIncomingCall,
-}) => {
+const CurrentCall: React.FC<Props> = ({ currentStatus, currentSession }) => {
 	const [currentSeconds, setCurrentSeconds] = useState<number>(0);
 
 	useEffect(() => {
@@ -54,14 +49,19 @@ const CurrentCall: React.FC<Props> = ({
 
 	return (
 		<Flex
-			style={{ marginBlockStart: 'auto', inlineSize: '100%', textTransform: 'uppercase' }}
+			style={{
+				marginBlockStart: 'auto',
+				inlineSize: '100%',
+				textTransform: 'uppercase',
+			}}
 			justify='space-between'
 		>
 			<Flex
 				align='center'
 				gap={'.5em'}
 			>
-				<Typography.Text strong
+				<Typography.Text
+					strong
 					type={`${currentStatus === 'ended' ? 'danger' : 'success'}`}
 				>
 					{currentStatus}
