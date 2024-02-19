@@ -69,17 +69,19 @@ const App: React.FC = () => {
 				session.on('connecting', () => {
 					setIsCalling(true);
 					setCurrentStatus('connecting');
-
 					session.connection.addEventListener('track', (event) => {
-						// это не трогать
 						if (event.streams && event.streams[0]) {
 							audio.srcObject = event.streams[0];
 						}
 					});
 				});
 
-				session.on('accepted', (event) => {
+				session.on('accepted', () => {
 					setCurrentStatus('connected');
+					const remoteStream = session.connection.getRemoteStreams()[0];
+					if (remoteStream) {
+						audio.srcObject = remoteStream;
+					}
 				});
 
 				session.on('ended', () => {
@@ -113,7 +115,8 @@ const App: React.FC = () => {
 				updateCallHistory(callTemplates.outgoingEnded(session));
 			});
 
-			session.on('failed', () => {
+			session.on('failed', (e) => {
+				console.log(e);
 				updateCallHistory(callTemplates.outgoingFailed(session));
 			});
 		},

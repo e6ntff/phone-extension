@@ -12,7 +12,7 @@ interface Props {
 }
 
 const Calls: React.FC<Props> = ({ callHistory, setCallHistory, makeCall }) => {
-	const [address, setAddress] = useState<string>('0332056');
+	const [address, setAddress] = useState<string>('');
 
 	const clearHistory = useCallback(() => {
 		setCallHistory([]);

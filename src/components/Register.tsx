@@ -14,9 +14,9 @@ interface Props {
 
 const Register: React.FC<Props> = ({ registerUser }) => {
 	const [values, setValues] = useState({
-		server: 'voip.uiscom.ru',
-		login: '0332057',
-		password: 'fuP7YqwR_R',
+		server: '',
+		login: '',
+		password: '',
 	});
 
 	const compileConfiguration = useCallback(() => {
