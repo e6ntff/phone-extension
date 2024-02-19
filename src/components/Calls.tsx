@@ -28,12 +28,10 @@ const Calls: React.FC<Props> = ({ callHistory, setCallHistory, makeCall }) => {
 						setAddress(event.target.value);
 					}}
 					type='text'
-					addonBefore='sip:'
-					addonAfter='@voip.uiscom.ru'
 				/>
 				<Button
 					onClick={() => {
-						makeCall(`sip:${address}@voip.uiscom.ru`);
+						makeCall(address);
 					}}
 				>
 					<PhoneOutlined />
