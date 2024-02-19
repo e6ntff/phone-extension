@@ -19,6 +19,11 @@ const Calls: React.FC<Props> = ({ callHistory, setCallHistory, makeCall }) => {
 		localStorage.setItem('callHistory', JSON.stringify([]));
 	}, [setCallHistory]);
 
+	const handleCall = useCallback(() => {
+		makeCall(address);
+		setAddress('');
+	}, [makeCall, address, setAddress]);
+
 	return (
 		<>
 			<Space direction='horizontal'>
@@ -29,11 +34,7 @@ const Calls: React.FC<Props> = ({ callHistory, setCallHistory, makeCall }) => {
 					}}
 					type='text'
 				/>
-				<Button
-					onClick={() => {
-						makeCall(address);
-					}}
-				>
+				<Button onClick={handleCall}>
 					<PhoneOutlined />
 				</Button>
 				<Button onClick={clearHistory}>
